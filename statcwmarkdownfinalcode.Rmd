@@ -1,0 +1,188 @@
+---
+title: "Predictive Analysis of House Prices Using Regression Techniques"
+author: "Oshadha Kaveen Samarasinghe"
+date: "2024-06-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(ggplot2)
+library(caTools)
+```
+```{r}
+data4=read.csv(file.choose(),header = TRUE) 
+```
+```{r}
+str(data4)
+summary(data4)
+View(data4)
+```
+```{r}
+missing_values <- colSums(is.na(data4))
+missing_values
+```
+```{r}
+data4$LotFrontage[is.na(data4$LotFrontage)] <- median(data4$LotFrontage, na.rm = TRUE)
+data4$MasVnrArea[is.na(data4$MasVnrArea)] <- median(data4$MasVnrArea, na.rm = TRUE)
+data4$GarageYrBlt[is.na(data4$GarageYrBlt)] <- median(data4$GarageYrBlt, na.rm = TRUE)
+```
+```{r}
+numeric_vars <- c("LotFrontage", "GrLivArea", "TotalBsmtSF", "SalePrice", "MasVnrArea", "GarageYrBlt")
+data4[numeric_vars] <- scale(data4[numeric_vars])
+```
+```{r}
+ggplot(data4, aes(x = GrLivArea, y = SalePrice)) + 
+  geom_point(color = "blue") + 
+  labs(title = "Scatter Plot of Living Area vs Sale Price (Before Outlier Removal)",
+       x = "Ground Living Area",
+       y = "Sale Price")
+```
+```{r}
+ggplot(data4, aes(x = YearBuilt, y = SalePrice)) + 
+  geom_point(color = "green") + 
+  labs(title = "Scatter Plot of Year Built vs Sale Price (Before Outlier Removal)",
+       x = "Year Built",
+       y = "Sale Price")
+```
+```{r}
+ggplot(data4, aes(x = TotalBsmtSF, y = SalePrice)) + 
+  geom_point(color = "red") + 
+  labs(title = "Scatter Plot of Basement Area vs Sale Price (Before Outlier Removal)",
+       x = "Total Basement Area",
+       y = "Sale Price")
+```
+```{r}
+ggplot(data4, aes(y = SalePrice)) + 
+  geom_boxplot(fill = "orange") + 
+  labs(title = "Box Plot of Sale Price (Before Outlier Removal)",
+       y = "Sale Price")
+```
+```{r}
+ggplot(data4, aes(x = MasVnrArea, y = SalePrice)) + 
+  geom_point(color = "purple") + 
+  geom_smooth(method = "lm", color = "blue", se = FALSE) + 
+  labs(title = "Scatter Plot of MasVnrArea vs Sale Price (Before Outlier Removal)",
+       x = "MasVnrArea",
+       y = "Sale Price")
+```
+```{r}
+if ("Neighborhood" %in% colnames(data4)) {
+  ggplot(data4, aes(x = Neighborhood, y = SalePrice)) + 
+    geom_boxplot() + 
+    labs(title = "Box Plot of Sale Price by Neighborhood (Before Outlier Removal)",
+         x = "Neighborhood",
+         y = "Sale Price") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+}
+```
+```{r}
+# Function to remove outliers based on IQR
+remove_outliers <- function(data, variables) {
+  for (var in variables) {
+    Q1 <- quantile(data[[var]], 0.25, na.rm = TRUE)
+    Q3 <- quantile(data[[var]], 0.75, na.rm = TRUE)
+    IQR <- Q3 - Q1
+    lower_bound <- Q1 - 1.5 * IQR
+    upper_bound <- Q3 + 1.5 * IQR
+    data <- data[data[[var]] >= lower_bound & data[[var]] <= upper_bound, ]
+  }
+  return(data)
+}
+
+# Remove outliers
+data4_clean <- remove_outliers(data4, numeric_vars)
+
+# Check the structure and summary of the cleaned data
+str(data4_clean)
+summary(data4_clean)
+```
+```{r}
+ggplot(data4_clean, aes(x = GrLivArea, y = SalePrice)) + 
+  geom_point(color = "blue") + 
+  labs(title = "Scatter Plot of Living Area vs Sale Price (After Outlier Removal)",
+       x = "Ground Living Area",
+       y = "Sale Price")
+```
+```{r}
+ggplot(data4_clean, aes(x = YearBuilt, y = SalePrice)) + 
+  geom_point(color = "green") + 
+  labs(title = "Scatter Plot of Year Built vs Sale Price (After Outlier Removal)",
+       x = "Year Built",
+       y = "Sale Price")
+```
+```{r}
+ggplot(data4_clean, aes(x = TotalBsmtSF, y = SalePrice)) + 
+  geom_point(color = "red") + 
+  labs(title = "Scatter Plot of Basement Area vs Sale Price (After Outlier Removal)",
+       x = "Total Basement Area",
+       y = "Sale Price")
+```
+```{r}
+ggplot(data4_clean, aes(y = SalePrice)) + 
+  geom_boxplot(fill = "orange") + 
+  labs(title = "Box Plot of Sale Price (After Outlier Removal)",
+       y = "Sale Price")
+```
+```{r}
+ggplot(data4_clean, aes(x = MasVnrArea, y = SalePrice)) + 
+  geom_point(color = "purple") + 
+  geom_smooth(method = "lm", color = "blue", se = FALSE) + 
+  labs(title = "Scatter Plot of MasVnrArea vs Sale Price (After Outlier Removal)",
+       x = "MasVnrArea",
+       y = "Sale Price")
+```
+```{r}
+if ("Neighborhood" %in% colnames(data4_clean)) {
+  ggplot(data4_clean, aes(x = Neighborhood, y = SalePrice)) + 
+    geom_boxplot() + 
+    labs(title = "Box Plot of Sale Price by Neighborhood (After Outlier Removal)",
+         x = "Neighborhood",
+         y = "Sale Price") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+}
+```
+```{r}
+set.seed(123)
+split <- sample.split(data4_clean$SalePrice, SplitRatio = 0.8)
+train_data <- subset(data4_clean, split == TRUE)
+test_data <- subset(data4_clean, split == FALSE)
+```
+```{r}
+Multiple_linear_mod <- lm(SalePrice ~ GrLivArea + YearBuilt + TotalBsmtSF + MasVnrArea + GarageYrBlt, data = train_data)
+```
+```{r}
+summary(Multiple_linear_mod)
+```
+```{r}
+predictions <- predict(Multiple_linear_mod, newdata = test_data)
+```
+```{r}
+mse <- mean((test_data$SalePrice - predictions)^2)
+```
+```{r}
+rmse <- sqrt(mse)
+```
+```{r}
+r_squared <- summary(Multiple_linear_mod)$r.squared
+```
+```{r}
+cat("Mean Squared Error (MSE):", mse, "\n")
+cat("Root Mean Squared Error (RMSE):", rmse, "\n")
+cat("R-Squared:", r_squared, "\n")
+```
+```{r}
+comparison <- data.frame(Actual = test_data$SalePrice, Predicted = predictions)
+print(comparison)
+summary(comparison)
+```
+```{r}
+ggplot(comparison, aes(x = Actual, y = Predicted)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "blue") +
+  labs(title = "Actual vs Predicted Sale Price",
+       x = "Actual Sale Price",
+       y = "Predicted Sale Price")
+```
